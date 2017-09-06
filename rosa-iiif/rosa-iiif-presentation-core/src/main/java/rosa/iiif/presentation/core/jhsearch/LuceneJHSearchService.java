@@ -33,15 +33,18 @@ public class LuceneJHSearchService extends LuceneSearchService implements JHSear
                 new JHSearchField[] {
                         JHSearchField.DESCRIPTION,
                         JHSearchField.TRANSCRIPTION,
-                        JHSearchField.ILLUSTRATION, 
-                        JHSearchField.TITLE,
+                        JHSearchField.ILLUSTRATION,
+                        JHSearchField.CHARACTER_NAME,
+                        JHSearchField.PLACE,
                         JHSearchField.REPO});
         
         searchfields.put("pizancollection",
                 new JHSearchField[] {
                         JHSearchField.DESCRIPTION,
                         JHSearchField.TITLE,
-                        JHSearchField.REPO}); 
+                        JHSearchField.REPO,
+                        JHSearchField.PLACE,
+                        JHSearchField.TRANSCRIPTION});
         
         searchfields.put("aorcollection",
                 new JHSearchField[] {
@@ -77,7 +80,7 @@ public class LuceneJHSearchService extends LuceneSearchService implements JHSear
                         JHSearchField.PEOPLE,
                         JHSearchField.PLACE,
                         JHSearchField.REPO,
-                        JHSearchField.TEXT});
+                        JHSearchField.TRANSCRIPTION});
         }
     
     /**
