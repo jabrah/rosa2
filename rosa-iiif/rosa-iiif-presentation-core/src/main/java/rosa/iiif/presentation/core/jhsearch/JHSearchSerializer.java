@@ -5,6 +5,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.List;
+import java.util.Properties;
 
 import org.json.JSONException;
 import org.json.JSONWriter;
@@ -16,8 +17,18 @@ import rosa.search.model.SearchMatch;
 import rosa.search.model.SearchResult;
 
 public class JHSearchSerializer implements IIIFNames {
+    private final Properties fieldProps;
 
-    public JHSearchSerializer() {}
+    public JHSearchSerializer() {
+        this(null);
+    }
+
+    public JHSearchSerializer(Properties fieldProps) {
+        if (fieldProps == null) {
+            System.out.println(">>>> NO FIELD PROPERTIES FOUND <<<<");
+        }
+        this.fieldProps = fieldProps;
+    }
 
     public void write(String request_url, String query, SearchResult result, OutputStream os) throws JSONException, IOException {
         Writer writer = new OutputStreamWriter(os, "UTF-8");
@@ -26,7 +37,7 @@ public class JHSearchSerializer implements IIIFNames {
         writer.flush();
     }
     
-    public void write(JHSearchField[] fields, JHSearchCategory[] categories, OutputStream os) throws IOException {
+    public void write(JHSearchField[] fields, JHSearchCategory[] categories, String col, OutputStream os) throws IOException {
         Writer os_writer = new OutputStreamWriter(os, "UTF-8");
         JSONWriter writer = new JSONWriter(os_writer);
 
@@ -37,12 +48,11 @@ public class JHSearchSerializer implements IIIFNames {
             if (sf.isExposed()) {
                 writer.object();
                 writer.key("name").value(sf.getFieldName());
-                writer.key("label").value(sf.getLabel());
-                writer.key("description").value(sf.getDescription());
-                
-                String[] pairs = sf.getValueLabelPairs();
-                
-                if (pairs != null && pairs.length > 0) {
+                writeProperty("label", getFieldProp(sf.getLabel(), col), writer);
+                writeProperty("description", getFieldProp(sf.getDescription(), col), writer);
+
+                if (fieldHasValues(sf.getValueLabelPairs(), col)) {
+                    String[] pairs = getFieldProp(sf.getValueLabelPairs(), col).split(",");
                     writer.key("values").array();
                     
                     for (int i = 0; i < pairs.length; ) {
@@ -208,5 +218,24 @@ public class JHSearchSerializer implements IIIFNames {
         }
         
         writer.endObject();
+    }
+
+    private void writeProperty(String key, String value, JSONWriter writer) {
+        if (key == null || key.isEmpty() || value == null) {
+            return;
+        }
+        writer.key(key).value(value);
+    }
+
+    private boolean fieldHasValues(String name, String collectionName) {
+        return fieldProps != null && fieldProps.containsKey(collectionName + name);
+    }
+
+    private String getFieldProp(String name, String collectionName) {
+        String field = collectionName + name;
+        if (fieldProps == null || !fieldProps.containsKey(field)) {
+            return "";
+        }
+        return fieldProps.getProperty(field);
     }
 }

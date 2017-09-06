@@ -32,6 +32,7 @@ import rosa.archive.core.serialize.SHA1ChecksumSerializer;
 import rosa.archive.core.serialize.Serializer;
 import rosa.archive.core.serialize.SerializerSet;
 import rosa.archive.core.serialize.TranscriptionXmlSerializer;
+import rosa.iiif.presentation.core.jhsearch.JHSearchSerializer;
 import rosa.iiif.presentation.core.jhsearch.LuceneJHSearchService;
 import rosa.search.core.SearchService;
 
@@ -111,7 +112,8 @@ public class ToolModule extends AbstractModule {
     SearchService provideSearchService(@Named("iiif.pres.search.index") String index_path,
                                        @Named("formatter.presentation") IIIFPresentationRequestFormatter requestFormatter) {
         try {
-            return new LuceneJHSearchService(Paths.get(index_path), requestFormatter);
+            return new LuceneJHSearchService(Paths.get(index_path), requestFormatter,
+                    new JHSearchSerializer());
         } catch (IOException e) {
             throw new RuntimeException("Failed to create LuceneIIIFSearchService", e);
         }

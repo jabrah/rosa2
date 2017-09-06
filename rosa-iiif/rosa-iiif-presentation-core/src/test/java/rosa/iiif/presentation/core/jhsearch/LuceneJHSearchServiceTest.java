@@ -52,7 +52,8 @@ public class LuceneJHSearchServiceTest extends BaseSearchTest {
         String pres_prefix = "/pres";
 
         service = new LuceneJHSearchService(tmpfolder.newFolder().toPath(),
-                new IIIFPresentationRequestFormatter(scheme, host, pres_prefix, port));
+                new IIIFPresentationRequestFormatter(scheme, host, pres_prefix, port),
+                new JHSearchSerializer());
         service.update(store, VALID_COLLECTION);
         
         assertTrue(service.has_content());

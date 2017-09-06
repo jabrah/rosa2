@@ -31,6 +31,7 @@ import rosa.iiif.presentation.core.IIIFPresentationRequestParser;
 import rosa.iiif.presentation.core.IIIFPresentationService;
 import rosa.iiif.presentation.core.ImageIdMapper;
 import rosa.iiif.presentation.core.JhuFSIImageIdMapper;
+import rosa.iiif.presentation.core.jhsearch.JHSearchSerializer;
 import rosa.iiif.presentation.core.jhsearch.JHSearchService;
 import rosa.iiif.presentation.core.jhsearch.LuceneJHSearchService;
 import rosa.iiif.presentation.core.transform.PresentationSerializer;
@@ -56,6 +57,7 @@ public class IIIFPresentationServletModule extends ServletModule {
     private static final Logger LOG = Logger.getLogger(IIIFPresentationServletModule.class.toString());
     private static final String SERVLET_CONFIG_PATH = "/iiif-servlet.properties";
     private static final String FSI_SHARE_MAP_CONFIG_PATH = "/fsi-share-map.properties";
+    private static final String SEARCH_FIELD_PROPS_PATH = "/search-fields.properties";
 
     @Override
     protected void configureServlets() {
@@ -157,7 +159,8 @@ public class IIIFPresentationServletModule extends ServletModule {
             @Named("formatter.presentation") IIIFPresentationRequestFormatter requestFormatter) {
         LOG.info("Using lucene index path :: " + index_path);
         try {
-            return new LuceneJHSearchService(Paths.get(index_path), requestFormatter);
+            return new LuceneJHSearchService(Paths.get(index_path), requestFormatter,
+                    new JHSearchSerializer(loadProperties(SEARCH_FIELD_PROPS_PATH)));
         } catch (IOException e) {
             throw new RuntimeException("Failed to create LuceneIIIFSearchService", e);
         }

@@ -85,10 +85,10 @@ public class LuceneJHSearchService extends LuceneSearchService implements JHSear
      * @param formatter
      * @throws IOException
      */
-    public LuceneJHSearchService(Path path, IIIFPresentationRequestFormatter formatter) throws IOException {
+    public LuceneJHSearchService(Path path, IIIFPresentationRequestFormatter formatter, JHSearchSerializer serializer) throws IOException {
         super(path, new JHSearchLuceneMapper(formatter));
 
-        this.serializer = new JHSearchSerializer();
+        this.serializer = serializer;
         this.formatter = formatter;
     }
 
@@ -185,14 +185,14 @@ public class LuceneJHSearchService extends LuceneSearchService implements JHSear
 
     @Override
     public void handle_info_request(PresentationRequest req, OutputStream os) throws IOException {
-        JHSearchField[] fields = searchfields.get(req.getType() == PresentationRequestType.COLLECTION ?
-                req.getName() : req.getId());
+        String colName = req.getType() == PresentationRequestType.COLLECTION ? req.getName() : req.getId();
+        JHSearchField[] fields = searchfields.get(colName);
         
         if (fields == null) {
             fields = new JHSearchField[]{};
         }
         
-        serializer.write(fields, JHSearchCategory.values(), os);    
+        serializer.write(fields, JHSearchCategory.values(), colName, os);
     }
 
 	@Override
