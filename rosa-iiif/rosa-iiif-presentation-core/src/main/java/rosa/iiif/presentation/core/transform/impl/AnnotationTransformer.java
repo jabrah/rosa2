@@ -1,12 +1,10 @@
 package rosa.iiif.presentation.core.transform.impl;
 
-import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
@@ -21,12 +19,11 @@ import rosa.archive.core.util.TranscriptionSplitter;
 import rosa.archive.model.Book;
 import rosa.archive.model.BookCollection;
 import rosa.archive.model.BookImage;
-import rosa.archive.model.CharacterNames;
 import rosa.archive.model.Illustration;
-import rosa.archive.model.IllustrationTitles;
 import rosa.archive.model.ImageList;
 import rosa.archive.model.aor.*;
 import rosa.iiif.presentation.core.IIIFPresentationRequestFormatter;
+import rosa.iiif.presentation.core.extras.ISNIResourceDb;
 import rosa.iiif.presentation.core.transform.Transformer;
 import rosa.iiif.presentation.core.html.AdapterSet;
 import rosa.iiif.presentation.core.util.AnnotationLocationUtil;
@@ -37,15 +34,13 @@ import rosa.iiif.presentation.model.annotation.AnnotationSource;
 import rosa.iiif.presentation.model.annotation.AnnotationTarget;
 import rosa.iiif.presentation.model.selector.FragmentSelector;
 
-import java.io.UnsupportedEncodingException;
-
 public class AnnotationTransformer extends BasePresentationTransformer implements Transformer<Annotation>,
         AORAnnotatedPageConstants {
 
     private ArchiveNameParser nameParser;
     private AdapterSet htmlAdapters;
 //    private HtmlDecorator decorator;
-//    private ISNIResourceDb isni_db;
+    private ISNIResourceDb isni_db;
 
     @Inject
     public AnnotationTransformer(@Named("formatter.presentation") IIIFPresentationRequestFormatter presRequestFormatter,
@@ -79,11 +74,11 @@ public class AnnotationTransformer extends BasePresentationTransformer implement
     }
 
     private Annotation adaptAnnotation(BookCollection collection, Book book, rosa.archive.model.aor.Annotation anno, BookImage image) {
-//        if (isni_db == null) {
-//            isni_db = new ISNIResourceDb(collection);
-//        } else {
-//            isni_db.setCollection(collection);
-//        }
+        if (isni_db == null) {
+            isni_db = new ISNIResourceDb(collection);
+        } else {
+            isni_db.setCollection(collection);
+        }
         if (anno == null) {
             return null;
         }
@@ -308,112 +303,13 @@ public class AnnotationTransformer extends BasePresentationTransformer implement
             ann.setMotivation(SC_PAINTING);
             ann.setType(OA_ANNOTATION);
 
-            CharacterNames names = collection.getCharacterNames();
-            IllustrationTitles titles = collection.getIllustrationTitles();
-
-            // Resolve character name IDs (should be done in archive layer)
-            StringBuilder sb_names = new StringBuilder();
-            for (String name_id : ill.getCharacters()) {
-                String name = names.getNameInLanguage(name_id, "en");
-
-                sb_names.append(name == null ? name_id : name);
-                if (!sb_names.toString().isEmpty()) {
-                    sb_names.append(", ");
-                } else {
-                    sb_names.append(' ');
-                }
-            }
-
-            // Resolve illustration title IDs (should be done in archive layer)
-            StringBuilder sb_titles = new StringBuilder();
-            for (String title_id : ill.getTitles()) {
-                String title = titles.getTitleById(title_id);
-
-                sb_titles.append(title == null ? title_id : title);
-                if (!sb_titles.toString().isEmpty()) {
-                    sb_titles.append(", ");
-                } else {
-                    sb_titles.append(' ');
-                }
-            }
-
-            String content;
-            ByteArrayOutputStream output = new ByteArrayOutputStream();
-            try {
-                XMLStreamWriter xml = XMLOutputFactory.newInstance().createXMLStreamWriter(output);
-
-                addSimpleElement(xml, "p", "Illustration", "class", "annotation-title");
-
-                if (isNotEmpty(ill.getTitles())) {
-                    xml.writeStartElement("p");
-                    addSimpleElement(xml, "span", "Titles:", "class", "bold");
-                    xml.writeCharacters(sb_titles.toString());
-                    xml.writeEndElement();
-                }
-                if (isNotEmpty(ill.getCharacters())) {
-                    xml.writeStartElement("p");
-                    addSimpleElement(xml, "span", "Characters:", "class", "bold");
-                    xml.writeCharacters(sb_names.toString());
-                    xml.writeEndElement();
-                }
-                if (isNotEmpty(ill.getTextualElement())) {
-                    xml.writeStartElement("p");
-                    addSimpleElement(xml, "span", "Textual Elements:", "class", "bold");
-                    xml.writeCharacters(ill.getTextualElement());
-                    xml.writeEndElement();
-                }
-                if (isNotEmpty(ill.getCostume())) {
-                    xml.writeStartElement("p");
-                    addSimpleElement(xml, "span", "Costume:", "class", "bold");
-                    xml.writeCharacters(ill.getCostume());
-                    xml.writeEndElement();
-                }
-                if (isNotEmpty(ill.getInitials())) {
-                    xml.writeStartElement("p");
-                    addSimpleElement(xml, "span", "Initials:", "class", "bold");
-                    xml.writeCharacters(ill.getInitials());
-                    xml.writeEndElement();
-                }
-                if (isNotEmpty(ill.getObject())) {
-                    xml.writeStartElement("p");
-                    addSimpleElement(xml, "span", "Object:", "class", "bold");
-                    xml.writeCharacters(ill.getObject());
-                    xml.writeEndElement();
-                }
-                if (isNotEmpty(ill.getLandscape())) {
-                    xml.writeStartElement("p");
-                    addSimpleElement(xml, "span", "Landscape:", "class", "bold");
-                    xml.writeCharacters(ill.getLandscape());
-                    xml.writeEndElement();
-                }
-                if (isNotEmpty(ill.getArchitecture())) {
-                    xml.writeStartElement("p");
-                    addSimpleElement(xml, "span", "Architecture:", "class", "bold");
-                    xml.writeCharacters(ill.getArchitecture());
-                    xml.writeEndElement();
-                }
-                if (isNotEmpty(ill.getOther())) {
-                    xml.writeStartElement("p");
-                    addSimpleElement(xml, "span", "Other:", "class", "bold");
-                    xml.writeCharacters(ill.getOther());
-                    xml.writeEndElement();
-                }
-
-                content = output.toString("UTF-8");
-            } catch (XMLStreamException | UnsupportedEncodingException e) {
-                content = "";
-            }
-
+            String content = htmlAdapters.get(Illustration.class).adapt(collection, book, image, ill);
             ann.setDefaultSource(new AnnotationSource("ID", IIIFNames.DC_TEXT, "text/html", content, "en"));
             ann.setDefaultTarget(locationOnCanvas(image, Location.INTEXT));
             anns.add(ann);
         }
 
         return anns;
-    }
-
-    private boolean isNotEmpty(String[] str) {
-        return str != null && str.length > 0;
     }
 
     private boolean isNotEmpty(String str) {
