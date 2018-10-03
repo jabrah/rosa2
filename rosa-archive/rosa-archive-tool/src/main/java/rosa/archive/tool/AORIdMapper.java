@@ -95,7 +95,7 @@ public class AORIdMapper {
         result.put(book.name(), new AorLocation(col, book.name(), null, null));
 
 
-        try (InputStream in = book.getByteStream(book.name() + ArchiveItemType.IMAGE_LIST)) {
+        try (InputStream in = book.getByteStream(book.name() + ArchiveConstants.IMAGES)) {
             ImageList list = ilSerializer.read(in, errors);
             list.getImages().stream()
                     .map(BookImage::getId)
