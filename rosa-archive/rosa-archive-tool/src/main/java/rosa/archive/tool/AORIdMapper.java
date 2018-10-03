@@ -6,9 +6,12 @@ import rosa.archive.core.ArchiveNameParser;
 import rosa.archive.core.ByteStreamGroup;
 import rosa.archive.core.serialize.AORAnnotatedPageSerializer;
 import rosa.archive.core.serialize.FileMapSerializer;
+import rosa.archive.core.serialize.ImageListSerializer;
 import rosa.archive.core.util.AnnotationLocationMapUtil;
 import rosa.archive.model.ArchiveItemType;
+import rosa.archive.model.BookImage;
 import rosa.archive.model.FileMap;
+import rosa.archive.model.ImageList;
 import rosa.archive.model.aor.AnnotatedPage;
 import rosa.archive.model.aor.Annotation;
 import rosa.archive.model.aor.AorLocation;
@@ -39,6 +42,7 @@ public class AORIdMapper {
     private static final String FILEMAP_NAME = "filemap.csv";
     private static final AORAnnotatedPageSerializer aorSerializer = new AORAnnotatedPageSerializer();
     private static final FileMapSerializer fileMapSerializer = new FileMapSerializer();
+    private static final ImageListSerializer ilSerializer = new ImageListSerializer();
     private static final Map<String, FileMap> map_cache = new ConcurrentHashMap<>();
     private static final FileMap emptyFileMap = new FileMap();
 
@@ -90,6 +94,14 @@ public class AORIdMapper {
 
         result.put(book.name(), new AorLocation(col, book.name(), null, null));
 
+
+        try (InputStream in = book.getByteStream(book.name() + ArchiveItemType.IMAGE_LIST)) {
+            ImageList list = ilSerializer.read(in, errors);
+            list.getImages().stream()
+                    .map(BookImage::getId)
+                    .forEach(image -> result.putAll(doImage(col, book.name(), image)));
+        }
+
         book.listByteStreamNames().stream()
                 .filter(file -> nameParser.getArchiveItemType(file) == ArchiveItemType.TRANSCRIPTION_AOR)
                 .forEach(aor -> {
@@ -111,6 +123,27 @@ public class AORIdMapper {
         return result;
     }
 
+    private Map<String, AorLocation> doImage(String col, String book, String image) {
+        Map<String, AorLocation> result = new HashMap<>();
+
+        // Add archive name for this image
+        result.putIfAbsent(getId(book, image, null), new AorLocation(col, book, image, null));
+
+        // Add 'original' name for this image
+        FileMap pageMap = loadFileMap(col, book);
+        for (Entry<String, String> entry : pageMap.getMap().entrySet()) {
+            if (entry.getValue().equals(image)) {
+                result.putIfAbsent(
+                        getId(book, getPageLabel(entry.getKey()), null),
+                        new AorLocation(col, book, getPageLabel(image), null)
+                );
+                break;
+            }
+        }
+
+        return result;
+    }
+
     /**
      * For each page, add a mapping for the page and a mapping for any annotations on the page.
      * The mapping for the page will use the original file name, found from the book's page
@@ -124,22 +157,7 @@ public class AORIdMapper {
     private Map<String, AorLocation> doPage(String col, String book, AnnotatedPage page) {
         Map<String, AorLocation> result = new HashMap<>();
 
-        FileMap pageMap = loadFileMap(col, book);
-
-        String orig_page = null;
-        for (Entry<String, String> entry : pageMap.getMap().entrySet()) {
-            if (entry.getValue().equals(page.getPage())) {
-                orig_page = getPageLabel(book, entry.getKey());
-                break;
-            }
-        }
-
-        if (orig_page != null && !orig_page.isEmpty()) {
-            AorLocation loc = new AorLocation(col, book, getPageLabel(book, page.getPage()), null);
-            result.put(getId(book, orig_page, null), loc);
-        }
-
-        String label = getPageLabel(book, page.getPage());
+        String label = getPageLabel(page.getPage());
         String p = book + DELIMITER + label;
         result.putIfAbsent(p, new AorLocation(col, book, label, null));
 
@@ -151,7 +169,7 @@ public class AORIdMapper {
         return result;
     }
 
-    private String getPageLabel(String book, String page) {
+    private String getPageLabel(String page) {
         String[] parts = page.split("\\.");
         if (parts.length == 2) {
             // we can guess that this is using the "original" image names (as opposed to archive name).
